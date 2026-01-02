@@ -2,15 +2,6 @@ import SHA256 from 'crypto-js/sha256.js';
 import pkg from 'elliptic';
 const {ec: EC} = pkg;
 
-//Creamos la clase trasactions y su constructor
-/*export class Transaction{
-    constructor(fromAddress, toAddress, amount) {
-        this.fromAddress = fromAddress;
-        this.toAddress = toAddress;
-        this.amount = amount;
-    }
-}*/
-
 class Transaction{
     constructor (fromAddress, toAddress, amount){
         this.fromAddress = fromAddress;
@@ -99,8 +90,8 @@ class Block{
     return true;
     }
 
-    mineBlock(difficulty) {//MIentras desde el punto 0 al difficulty no haya la cantidad necesaria de 0s en el Hash, no para.
-        while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {
+    confirmarFondos(difficulty) {//Mientras desde el punto 0 al difficulty no haya la cantidad necesaria de 0s en el Hash, no para.
+        while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {//En el hash, desde la letra 0 al difficulty tiene que ser igual que lo de la derecha
             this.nonce++;
             this.hash = this.calculatehash();
         }
@@ -122,8 +113,6 @@ class Blockchain{
         //Lugar de almacenaje de transacciones
         this.pendingTransactions = [];
 
-        //Recompensa por minar un blockchain
-        this.miningReward = 50;
     }
 
     inicializarWallet(dirWallet, cantidad){//Para poder meter dinero en la cartera desde el principio
@@ -139,22 +128,25 @@ class Blockchain{
             throw new Error('Cannot add invalid transaction to chain');
         }
 
-        this.pendingTransactions.push(transaction);
+        this.pendingTransactions.push(transaction);//Antes de hacer esto, tanto el destino como el origen tienen que esta cifrados
     }
 
-    //Le pasas la direccion de tu cartera, donde recibiras el premio por los esfuerzos de minar
-    minePendingTransactions(miningRewardAddress) {//Estooo me viene muy bien
-        //
-        const rewardTx = new Transaction(null, miningRewardAddress, this.miningReward);//Le añadimos dinero de la nada
-        this.pendingTransactions.push(rewardTx);
+    //Ocurre cuando se añade mas Euro de la fábrica de monedas (inflación, perdida de fondos...)
+    CreacicionDeFondos(direccionDestino) {
+        
+        //const rewardTx = new Transaction(null, direccionDestino, 0);//Le añadimos dinero de la nada
+        //this.pendingTransactions.push(rewardTx);
 
         let block = new Block(Date.now(), this.pendingTransactions, this.getLatestBlock().hash);
-        block.mineBlock(this.difficulty);
+        block.confirmarFondos(this.difficulty);
 
         this.chain.push(block);//Cada vez que añadimos una transacción la cadena de bloques se actualiza
 
         this.pendingTransactions = [];//La cadena de transacciones pendientes se pone a 0
     }
+
+    //Tiene que poder añadir fondos mas a menudo, de lo contrario seria un cristo de bloques
+    
 
     //Codigo para comprobar nuestro saldo actual, va de uno en uno mirando todas las transacciones y haciendo recuento de cuanto tenemos
     getBalanceOfAddress(address){
@@ -192,7 +184,7 @@ class Blockchain{
 
     //Calculamos un nuevo hash para el bloque (lo anterior)
     //newBlock.hash = newBlock.calculateHash();
-    newBlock.mineBlock(this.difficulty);
+    newBlock.confirmarFondos(this.difficulty);
 
     //Y añadimos este nuevo bloque a la cadena
     this.chain.push(newBlock);
