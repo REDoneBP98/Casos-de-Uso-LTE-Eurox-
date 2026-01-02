@@ -1,0 +1,14 @@
+clave pública es: 048cf5f7394fbd1a76bde65c025d22c8b8e17481b69ec7240bb51ec7285c2c73a5f9e6697ef5be3fd49241646bda0832faa72b57bc79de15de4aaeea0326d53734
+
+llave privada es: 819613a98aca1c943b862e578d1b684c4f541121049cc7a31f0249a6e9007656
+
+
+
+
+SEGUNDO USUARIO (PARA PRUEBAS)--------------------------------------------------------------
+
+tu clave pública es: 040e0a78c98f8fdae50f8d05098ce6270d851d5d72b3810a3c59eb66be7a92d2eb5ca0cfbfb6936dcc4f8303c008e72cea16cc4d637766b87f1c52a6953a5b78ff
+
+tu clave privada es: 7e75a138c1d3749466503c0792f39aec1d0ab2821a9876da95393f2591bdb378
+
+Para ejecutar: Node mian.js
