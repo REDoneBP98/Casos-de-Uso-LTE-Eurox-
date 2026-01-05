@@ -3,18 +3,23 @@ import pkg from 'elliptic';
 const {ec: EC} = pkg;
 
 class Transaction{
-    constructor (fromAddress, toAddress, amount){
-        this.fromAddress = fromAddress;
-        this.toAddress = toAddress;
-        this.amount = amount;
+    constructor (id, origen, destino, cantidad, pais_origen, pais_destino, concepto){
+        this.id = id;
+        this.origen = origen;
+        this.destino = destino;
+        this.cantidad = cantidad;
+        this.pais_origen = pais_origen;
+        this.pais_destino = pais_destino;
+        this.concepto = concepto;
     }
 
-    calculateHash(){//utilizamos los datos de origen, destino y cantidad para crear el Hash
-        return SHA256(this.fromAddress + this.toAddress + this.amount).toString();
-    };
+    calculateHash(){
+        return SHA256(this.id + this.origen + this.destino + this.cantidad + this.pais_origen + 
+            this.pais_destino + this.concepto).toString();
+    };//Transformamos los datos de la transacción a Hash, de forma que sea mas dificil de falsificar
 
     signTransaction(singningKey){//Firmar la transacción
-        if(singningKey.getPublic('hex') !== this.fromAddress){//Si no tienes la Key del origen error
+        if(singningKey.getPublic('hex') !== this.origen){//Si no tienes la Key del origen error
             throw new Error('Que leches, ¿intentas robar o que?, no firmes transacciones de otras carteras');
         }
 
@@ -24,17 +29,17 @@ class Transaction{
     }
 
     isValid(){//Esto solo comprueba que haya direccion origen y que este firmada la transacción
-        if(this.fromAddress !== null) return true;
+        if(this.origen !== null) return true;
 
             if(!this.signature || this.signature.length === 0){
                 throw new Error('Transacción sin firmar!');
             }
-            const publicKey = ec.keyFromPublic(this.fromAddress, 'hex');
+            const publicKey = ec.keyFromPublic(this.origen, 'hex');
             return publicKey.verify(this.calculateHash(), this.signature);
     }
 
     direccionesValidas(myLlave, dest){
-        if(myLlave.getPublic('hex') !== this.fromAddress){//Si mi dirección de cartera (clave publica) coincide con la parte publica de la llave, entonces bien
+        if(myLlave.getPublic('hex') !== this.origen){//Si mi dirección de cartera (clave publica) coincide con la parte publica de la llave, entonces bien
             console.log("Lo sentimos, pero tu dirección de cartera no existe o es erronea");
             return false;
         }
@@ -42,13 +47,13 @@ class Transaction{
         let ec = new EC('secp256k1');
         let llaveDest = ec.keyFromPrivate(dest);
 
-        if(llaveDest.getPublic('hex') !== this.toAddress){//Comprobamos si el destino coincide (a partir de la clave privada)
+        if(llaveDest.getPublic('hex') !== this.destino){//Comprobamos si el destino coincide (a partir de la clave privada)
             console.log("Lo sentimos, pero parece que la dirección de destino es erronea");
             return false;
         }
         
         
-        return true;//Si llega hasta aquí, entonces el origen y destino son reales.
+        return true;//Si devuelve esto, entonces es que origen y destino son reales
     }
 
     saldoSuficiente(origenWallet, moneda, cantidad){
@@ -59,7 +64,8 @@ class Transaction{
 
         return true; //Si has llegado, es que tienes saldo suficiente, de lo contrario te habra dado error
     }
-}
+
+};
 
 class Block{
     constructor(timestamp, transactions, previousHash = ""){
@@ -115,12 +121,37 @@ class Blockchain{
 
     }
 
+    crearID(){
+        const numeroRandom = (Math.floor(Math.random() * 10) + 1);
+        let idAnterior = 0;
+        //console.log("El numero random es: " + numeroRandom);
+
+        if( (this.chain.length > 0) && (this.chain.at(-1).transactions.at(-1) > 0) ){
+            let transacciones = this.chain.at(-1);
+            idAnterior = transacciones.transactions.at(-1).id;
+            console.log("IIIII: " + idAnterior + numeroRandom);
+        }
+
+        if(this.pendingTransactions.length > 0){
+            idAnterior = this.pendingTransactions.at(-1).id;//Tenemos que coger el ID de la última transacción que se hizo
+            console.log("EEEEE: " + idAnterior + numeroRandom);    
+        }
+        
+        return idAnterior + numeroRandom;;
+    };
+
     inicializarWallet(dirWallet, cantidad){//Para poder meter dinero en la cartera desde el principio
-        this.pendingTransactions.push(new Transaction(null, dirWallet, cantidad));//Esta funcion solo se puede usar al inicializar la blockchain
+        let ID = this.crearID();
+
+        console.log("El primer ID es: " + ID);
+
+        this.pendingTransactions.push(new Transaction( this.crearID() ,null, dirWallet, cantidad, null, null, "Añadir fondos al monedero"));//Esta funcion solo se puede usar al inicializar la blockchain
+    
+        console.log("Se han añadido fondos nuevos al monedero: (" + cantidad + ")");
     }
 
     addTransaction(transaction) {
-        if(!transaction.fromAddress || !transaction.toAddress){
+        if(!transaction.origen || !transaction.destino){
             throw new Error('Transaction must include from and to address');
         }
 
@@ -129,13 +160,11 @@ class Blockchain{
         }
 
         this.pendingTransactions.push(transaction);//Antes de hacer esto, tanto el destino como el origen tienen que esta cifrados
+        console.log("añadida la transacción con ID: " + transaction.id + " a la lista de transacciones.");
     }
 
     //Ocurre cuando se añade mas Euro de la fábrica de monedas (inflación, perdida de fondos...)
-    CreacicionDeFondos(direccionDestino) {
-        
-        //const rewardTx = new Transaction(null, direccionDestino, 0);//Le añadimos dinero de la nada
-        //this.pendingTransactions.push(rewardTx);
+    CreacicionDeFondos() {//TODO: Hay que cambiarlo, porque creo que no usaremos POW
 
         let block = new Block(Date.now(), this.pendingTransactions, this.getLatestBlock().hash);
         block.confirmarFondos(this.difficulty);
@@ -149,18 +178,18 @@ class Blockchain{
     
 
     //Codigo para comprobar nuestro saldo actual, va de uno en uno mirando todas las transacciones y haciendo recuento de cuanto tenemos
-    getBalanceOfAddress(address){
+    getBalanceOfAddress(direccion){
         let balance = 0; // El balance inicial es 0
        
         for(const block of this.chain){
             for(const trans of block.transactions){
 
-                if(trans.fromAddress === address){
-                    balance -= trans.amount;
+                if(trans.origen === direccion){
+                    balance -= trans.cantidad;
                 }
 
-                if(trans.toAddress === address){
-                    balance += trans.amount;
+                if(trans.destino === direccion){
+                    balance += trans.cantidad;
                 }
             }
         }
@@ -169,7 +198,7 @@ class Blockchain{
 
 
     createGenesisBlock(){//Creamos el bloque 0
-        return new Block("01/01/2017", "Genesis block", "0");
+        return new Block("01/01/2017", [], "0");
     }
 
 
