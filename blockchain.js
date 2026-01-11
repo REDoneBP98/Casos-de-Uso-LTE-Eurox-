@@ -11,235 +11,261 @@ class Transaction{
         this.pais_origen = pais_origen;
         this.pais_destino = pais_destino;
         this.concepto = concepto;
+        this.signature = null;
     }
 
+    //Transformar los datos de la transacción a hash
     calculateHash(){
         return SHA256(this.id + this.origen + this.destino + this.cantidad + this.pais_origen + 
             this.pais_destino + this.concepto).toString();
-    };//Transformamos los datos de la transacción a Hash, de forma que sea mas dificil de falsificar
+    };
 
-    signTransaction(singningKey){//Firmar la transacción
-        if(singningKey.getPublic('hex') !== this.origen){//Si no tienes la Key del origen error
-            throw new Error('Que leches, ¿intentas robar o que?, no firmes transacciones de otras carteras');
+    signTransaction(singningKey){
+        if(singningKey.getPublic('hex') !== this.origen){ //Si no tienes la key del origen, error
+            throw new Error('Qué leches, ¿intentas robar o qué? No firmes transacciones de otras carteras');
         }
-
-        const hashTx = this.calculateHash();//Calculamos el Hash
-        const sig = singningKey.sign(hashTx, 'base64');//Firmamos
-        this.signature = sig.toDER('hex');//Lo pasamos a hexadecimal
+        const hashTx = this.calculateHash(); //Calculamos el hash
+        const sig = singningKey.sign(hashTx, 'base64'); //Firmamos
+        this.signature = sig.toDER('hex'); //Lo pasamos a hexadecimal
     }
-
-    isValid(){//Esto solo comprueba que haya direccion origen y que este firmada la transacción
-        if(this.origen !== null) return true;
-
-            if(!this.signature || this.signature.length === 0){
-                throw new Error('Transacción sin firmar!');
-            }
-            const publicKey = ec.keyFromPublic(this.origen, 'hex');
-            return publicKey.verify(this.calculateHash(), this.signature);
-    }
-
-    direccionesValidas(myLlave, dest){
-        if(myLlave.getPublic('hex') !== this.origen){//Si mi dirección de cartera (clave publica) coincide con la parte publica de la llave, entonces bien
-            console.log("Lo sentimos, pero tu dirección de cartera no existe o es erronea");
-            return false;
-        }
-
-        let ec = new EC('secp256k1');
-        let llaveDest = ec.keyFromPrivate(dest);
-
-        if(llaveDest.getPublic('hex') !== this.destino){//Comprobamos si el destino coincide (a partir de la clave privada)
-            console.log("Lo sentimos, pero parece que la dirección de destino es erronea");
-            return false;
-        }
-        
-        
-        return true;//Si devuelve esto, entonces es que origen y destino son reales
-    }
-
-    saldoSuficiente(origenWallet, moneda, cantidad){
-        if(moneda.getBalanceOfAddress(origenWallet) < cantidad) {
-            console.log("Lo sentimos, pero parece que no tienes saldo suficiente");
-            return false;
-        }
-
-        return true; //Si has llegado, es que tienes saldo suficiente, de lo contrario te habra dado error
-    }
-
 };
 
-class Block{
-    constructor(timestamp, transactions, previousHash = ""){
-    this.previousHash = previousHash;
-
-    this.timestamp = timestamp;
-    
-    this.transactions = transactions;
-
-    this.hash = this.calculatehash();
-
-    this.nonce = 0;
-
+class Block {
+    constructor(timestamp, transactions, previousHash = "", validator) {
+        this.previousHash = previousHash;
+        this.timestamp = timestamp;
+        this.transactions = transactions;
+        this.validator = validator; //Clave pública del validador
+        this.hash = this.calculateHash();
+        this.signature = null;
     }
 
-    calculatehash() {
-        return SHA256(this.previousHash + this.timestamp + 
-            JSON.stringify(this.transactions) + this.nonce).toString();
+    calculateHash() {
+        return SHA256(
+            this.previousHash +
+            this.timestamp +
+            JSON.stringify(this.transactions) +
+            this.validator
+        ).toString();
     }
 
-    hasValidTransactions(){
-        for(const tx of this.transactions){
-            if(!tx.isValid()){//Si la transacción no es valida, error!
-                return false;
-            }
+    hasValidTransactions() {
+        for (const tx of this.transactions) {
+            if (!tx.isValid()) return false;
         }
-
-    return true;
+        return true;
     }
 
-    confirmarFondos(difficulty) {//Mientras desde el punto 0 al difficulty no haya la cantidad necesaria de 0s en el Hash, no para.
-        while (this.hash.substring(0, difficulty) !== Array(difficulty + 1).join("0")) {//En el hash, desde la letra 0 al difficulty tiene que ser igual que lo de la derecha
-            this.nonce++;
-            this.hash = this.calculatehash();
+    signBlock(signingKey) {
+        if (signingKey.getPublic('hex') !== this.validator) {
+            throw new Error("No eres el validador!");
         }
-
-        console.log('BLOCK MINED: ' + this.hash);
+        this.signature = signingKey.sign(this.hash, 'hex').toDER('hex');
     }
 
-    
+    isValidBlock() {
+        if (!this.signature){
+            return false;
+        }
+        const ec = new EC('secp256k1');
+        const key = ec.keyFromPublic(this.validator, 'hex');
+        return key.verify(this.hash, this.signature);
+    }
 }
-
 
 class Blockchain{
     constructor() {
         this.chain = [this.createGenesisBlock()];
-
-        //Declaramos el constructor de difficulty e inicializamos
-        this.difficulty = 3;
-
-        //Lugar de almacenaje de transacciones
-        this.pendingTransactions = [];
-
+        this.pendingTransactions = []; //Lista de almacenaje de transacciones
     }
 
-    crearID(){
-        const numeroRandom = (Math.floor(Math.random() * 10) + 1);
-        let idAnterior = 0;
-        //console.log("El numero random es: " + numeroRandom);
-
-        if( (this.chain.length > 0) && (this.chain.at(-1).transactions.at(-1) > 0) ){
-            let transacciones = this.chain.at(-1);
-            idAnterior = transacciones.transactions.at(-1).id;
-            console.log("IIIII: " + idAnterior + numeroRandom);
+    crearID() {
+        let maxID = 0;
+        //Recorremos todos los bloques para encontrar el ID más alto usado
+        for (const block of this.chain) {
+            for (const tx of block.transactions) {
+                if (tx.id > maxID){
+                    maxID = tx.id;
+                }
+            }
         }
-
-        if(this.pendingTransactions.length > 0){
-            idAnterior = this.pendingTransactions.at(-1).id;//Tenemos que coger el ID de la última transacción que se hizo
-            console.log("EEEEE: " + idAnterior + numeroRandom);    
+        //Recorremos las transacciones pendientes para incluirlas también
+        for (const tx of this.pendingTransactions) {
+            if (tx.id > maxID) maxID = tx.id;
         }
-        
-        return idAnterior + numeroRandom;;
-    };
+        //El nuevo ID será el siguiente número
+        return maxID + 1;
+    }
 
-    inicializarWallet(dirWallet, cantidad){//Para poder meter dinero en la cartera desde el principio
-        let ID = this.crearID();
-
-        console.log("El primer ID es: " + ID);
-
-        this.pendingTransactions.push(new Transaction( this.crearID() ,null, dirWallet, cantidad, null, null, "Añadir fondos al monedero"));//Esta funcion solo se puede usar al inicializar la blockchain
-    
-        console.log("Se han añadido fondos nuevos al monedero: (" + cantidad + ")");
+    //Para poder meter dinero en la cartera al principio
+    inicializarWallet(dirWallet, cantidad){ 
+        let id = this.crearID();
+        this.pendingTransactions.push(new Transaction(id, null, dirWallet, cantidad, null, null, "Inicializar wallet"));
+        console.log("Se han añadido fondos nuevos al monedero: " + cantidad);
     }
 
     addTransaction(transaction) {
         if(!transaction.origen || !transaction.destino){
-            throw new Error('Transaction must include from and to address');
+            throw new Error('Transacción inválida, debe tener dirección de origen y destino.');
         }
-
-        if(!transaction.isValid()){
-            throw new Error('Cannot add invalid transaction to chain');
+        if(!this.isValidTransaction(transaction)){
+            throw new Error('No se puede añadir una transacción inválida.');
         }
-
-        this.pendingTransactions.push(transaction);//Antes de hacer esto, tanto el destino como el origen tienen que esta cifrados
-        console.log("añadida la transacción con ID: " + transaction.id + " a la lista de transacciones.");
+        this.pendingTransactions.push(transaction); //Antes de hacer esto, tanto el destino como el origen tienen que estar cifrados
+        console.log("Añadida la transacción con id " + transaction.id + " a la lista de transacciones.");
     }
 
-    //Ocurre cuando se añade mas Euro de la fábrica de monedas (inflación, perdida de fondos...)
-    CreacicionDeFondos() {//TODO: Hay que cambiarlo, porque creo que no usaremos POW
+    //Elegir validador para PoS (cuanto más dinero, más probabilidades de validar)
+    selectValidator() {
+        let balances = {};
+        let totalStake = 0;
 
-        let block = new Block(Date.now(), this.pendingTransactions, this.getLatestBlock().hash);
-        block.confirmarFondos(this.difficulty);
+        for (const block of this.chain) {
+            for (const tx of block.transactions) {
+                if (tx.destino) {
+                    balances[tx.destino] = (balances[tx.destino] || 0) + tx.cantidad;
+                }
+                if (tx.origen) {
+                    balances[tx.origen] = (balances[tx.origen] || 0) - tx.cantidad;
+                }
+            }
+        }
 
-        this.chain.push(block);//Cada vez que añadimos una transacción la cadena de bloques se actualiza
+        for (const addr in balances) {
+            if (balances[addr] > 0) totalStake += balances[addr];
+        }
 
-        this.pendingTransactions = [];//La cadena de transacciones pendientes se pone a 0
+        let random = Math.random() * totalStake;
+        let cumulative = 0;
+
+        for (const addr in balances) {
+            if (balances[addr] > 0) {
+                cumulative += balances[addr];
+                if (cumulative >= random) return addr;
+            }
+        }
+
+        return null;
     }
 
-    //Tiene que poder añadir fondos mas a menudo, de lo contrario seria un cristo de bloques
-    
+    //Elige validador, crea un bloque, lo firma y lo añade
+    createBlockPOS(signingKeyValidador) {
+        const validator = this.selectValidator();
 
-    //Codigo para comprobar nuestro saldo actual, va de uno en uno mirando todas las transacciones y haciendo recuento de cuanto tenemos
+        if (!validator) {
+            console.log("No hay validador disponible");
+            return;
+        }
+        //Comprobamos que la clave privada coincide con el validador
+        if (signingKeyValidador.getPublic('hex') !== validator) {
+            throw new Error("La clave proporcionada no corresponde al validador seleccionado.");
+        }
+        //Creamos el bloque con las transacciones pendientes
+        const block = new Block(
+            Date.now(),
+            this.pendingTransactions,
+            this.getLatestBlock().hash,
+            validator
+        );
+
+        //Firmamos el bloque
+        block.signBlock(signingKeyValidador);
+        //Validamos el bloque antes de añadirlo
+        if (!block.isValidBlock()) {
+            throw new Error("El bloque no es válido, no se añade a la blockchain.");
+        }
+        //Añadimos el bloque a la cadena
+        this.chain.push(block);
+        //Limpiamos las transacciones pendientes
+        this.pendingTransactions = [];
+
+        //Recompensa por validar
+        const recompensa = 10; 
+        const rewardTx = new Transaction(
+                this.crearID(),
+                null,             
+                validator,        
+                recompensa,
+                null,
+                null,
+                "Recompensa por validar bloque"
+        );
+
+        // Añadir la transacción de recompensa a las pendientes
+        this.pendingTransactions.push(rewardTx);
+
+        console.log("Bloque validado y añadido por:", validator);
+    }
+
+    //Comprueba nuestro saldo actual, va de uno en uno mirando todas las transacciones y haciendo recuento de cuánto tenemos
     getBalanceOfAddress(direccion){
-        let balance = 0; // El balance inicial es 0
-       
+        let balance = 0; 
+
+        //Primero sumamos y restamos según los bloques ya minados
         for(const block of this.chain){
             for(const trans of block.transactions){
-
                 if(trans.origen === direccion){
                     balance -= trans.cantidad;
                 }
-
                 if(trans.destino === direccion){
                     balance += trans.cantidad;
                 }
             }
         }
+
+        //Luego comprobamos las transacciones pendientes
+        for(const trans of this.pendingTransactions){
+            if(trans.origen === direccion){
+                balance -= trans.cantidad;
+            }
+            if(trans.destino === direccion){
+                balance += trans.cantidad;
+            }
+        }
+
         return balance;
+}
+    isValidTransaction(transaction) {
+        if (transaction.origen === null) return true;
+        if (!transaction.signature || transaction.signature.length === 0) {
+            throw new Error("Transacción sin firmar!'");
+        }
+        if(this.getBalanceOfAddress(transaction.origen) < transaction.cantidad) {
+            throw new Error("Saldo insuficiente!");
+        }
+        const ec = new EC('secp256k1');
+        const publicKey = ec.keyFromPublic(transaction.origen, 'hex');
+        return publicKey.verify(transaction.calculateHash(), transaction.signature);
     }
 
-
-    createGenesisBlock(){//Creamos el bloque 0
-        return new Block("01/01/2017", [], "0");
+    //Crear el bloque 0
+    createGenesisBlock(){
+       return new Block("01/01/2017", [], "0", "genesis");
     }
-
 
     getLatestBlock(){//
         return this.chain[this.chain.length - 1];
     }
 
-
-    addBlock(newBlock){
-    //Cogemos la cara previousHash de nuestro bloque y le añadimos el hash de la anterior
-    newBlock.previousHash = this.getLatestBlock().hash;
-
-    //Calculamos un nuevo hash para el bloque (lo anterior)
-    //newBlock.hash = newBlock.calculateHash();
-    newBlock.confirmarFondos(this.difficulty);
-
-    //Y añadimos este nuevo bloque a la cadena
-    this.chain.push(newBlock);
-
-    }
-
-    isChainValid(){//Si la cadena de bloques es valida o no
+    isChainValid(){ 
         for (let i = 1; i < this.chain.length; i++){
             const currentBlock = this.chain[i];
             const previousBlock = this.chain[i - 1];
 
+            if (!currentBlock.isValidBlock()){
+                return false;
+            }
             if (!currentBlock.hasValidTransactions()) {
                 return false;
-            }//Estos dos ultimos estaban comentados ns porque
+            }
             if (currentBlock.hash !== currentBlock.calculateHash()) {
                 return false;
             }
-
             if (currentBlock.previousHash !== previousBlock.hash) {
                 return false;
             }
         }
-
-
-    return true;
-
+        return true;
     }
 }
 
