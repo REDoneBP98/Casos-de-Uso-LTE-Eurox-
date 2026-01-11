@@ -120,28 +120,28 @@ class Blockchain{
         let balances = {};
         let totalStake = 0;
 
-        for (const block of this.chain) {
-            for (const tx of block.transactions) {
+        for (const block of this.chain) {//Recorre cada nloque de la cadena
+            for (const tx of block.transactions) {//Cada lista de cada bloque
                 if (tx.destino) {
                     balances[tx.destino] = (balances[tx.destino] || 0) + tx.cantidad;
                 }
                 if (tx.origen) {
                     balances[tx.origen] = (balances[tx.origen] || 0) - tx.cantidad;
                 }
-            }
+            }//Llena la lista balances con los datos de cada usuario, busca en origen y destino.
         }
 
-        for (const addr in balances) {
+        for (const addr in balances) {//Apunta todo el dinero de los usuarios
             if (balances[addr] > 0) totalStake += balances[addr];
         }
 
-        let random = Math.random() * totalStake;
-        let cumulative = 0;
+        let random = Math.random() * totalStake;//Saca un numero en función del dinero total
+        let cumulative = 0;//Así, quien mas dinero tiene, mas posibilidades tendra de ser elegido.
 
         for (const addr in balances) {
             if (balances[addr] > 0) {
                 cumulative += balances[addr];
-                if (cumulative >= random) return addr;
+                if (cumulative >= random) return addr;//Cuando el nodo elegido supera el numero "random", entonces es elegido.
             }
         }
 
@@ -180,8 +180,8 @@ class Blockchain{
         this.pendingTransactions = [];
 
         //Recompensa por validar
-        const recompensa = 10; 
-        const rewardTx = new Transaction(
+        const recompensa = 10; //TODO: Creo que no deberia ser 10, sino alguna variable relacionada con el dinero transferido al banco central, pero hay que hablarlo
+        const rewardTx = new Transaction(//incluso si el banco central no es el que obtiene la recompensa, se deberia dar el caso del TODO, segun entiendo.
                 this.crearID(),
                 null,             
                 validator,        
