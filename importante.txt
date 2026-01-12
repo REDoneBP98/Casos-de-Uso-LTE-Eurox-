@@ -1,8 +1,13 @@
 clave pública es: 048cf5f7394fbd1a76bde65c025d22c8b8e17481b69ec7240bb51ec7285c2c73a5f9e6697ef5be3fd49241646bda0832faa72b57bc79de15de4aaeea0326d53734
+Esta es la que estaba antes de receptora de mywallet
 
 llave privada es: 819613a98aca1c943b862e578d1b684c4f541121049cc7a31f0249a6e9007656
 
+USUARIO BCE (BANCO CENTRAL EUROPEO)---------------------------------------------------------
 
+Tu clave pública es: 0412962daedbf8c5b22069438ccfe5657ce2ff0d356c2ad83b0be6d18dc1639985c2fff21aa7860a19062fc0c29ee7d62edc8829acfb2b16080644d54d9f96b535
+
+Tu clave privada es: f3ef493ab83a488df5ac1bbdb773b985ed8fb724990d566d7aaa646aae294072
 
 
 SEGUNDO USUARIO (PARA PRUEBAS)--------------------------------------------------------------
@@ -10,5 +15,19 @@ SEGUNDO USUARIO (PARA PRUEBAS)--------------------------------------------------
 tu clave pública es: 040e0a78c98f8fdae50f8d05098ce6270d851d5d72b3810a3c59eb66be7a92d2eb5ca0cfbfb6936dcc4f8303c008e72cea16cc4d637766b87f1c52a6953a5b78ff
 
 tu clave privada es: 7e75a138c1d3749466503c0792f39aec1d0ab2821a9876da95393f2591bdb378
+
+
+
+TERCER USUARIO (Richard)--------------------------------------------------------------------
+
+Tu clave pública es: 045376c7dd5eaca50cf462bb1f9e48159e10ee6f9650e4967e1b672bcca999acc506ffa4f6c379fc61fa1a323e8c6320b3ccc971a038ba7a5c4167d845ecf16208
+
+Tu clave privada es: e072c473556a64735e396dcd4cb52d94f33249f28daa860ad27a6387606d10d9
+
+CUARTO USUARIO (Porter)---------------------------------------------------------------------
+
+Tu clave pública es: 04e6d656264d353b512d52beaec2f95d47a36a9c67a58df0cda7920179735338274bde82d1f144fbbde6bc5d33883bebcf9ad51e93317536a7b81d9adfcdbf7b1e
+
+Tu clave privada es: 937a5bc4887b3f52f5f1d4bd2804adbf00c4e0df56ff6977efa191ec0139ebab
 
 Para ejecutar: Node main.js

@@ -2,6 +2,10 @@ import SHA256 from 'crypto-js/sha256.js';
 import pkg from 'elliptic';
 const {ec: EC} = pkg;
 
+const ec = new EC('secp256k1');
+const BCEkey = ec.keyFromPrivate('f3ef493ab83a488df5ac1bbdb773b985ed8fb724990d566d7aaa646aae294072');
+const walletBCE = BCEkey.getPublic('hex');
+
 class Transaction{
     constructor (id, origen, destino, cantidad, pais_origen, pais_destino, concepto){
         this.id = id;
@@ -76,9 +80,10 @@ class Block {
 class Blockchain{
     constructor() {
         this.chain = [this.createGenesisBlock()];
-        this.pendingTransactions = []; //Lista de almacenaje de transacciones
+        this.pendingTransactions = []; //Lista de transacciones pendientes
     }
 
+    
     crearID() {
         let maxID = 0;
         //Recorremos todos los bloques para encontrar el ID más alto usado
@@ -116,11 +121,11 @@ class Blockchain{
     }
 
     //Elegir validador para PoS (cuanto más dinero, más probabilidades de validar)
-    selectValidator() {
+    selectValidator() {//TODO: 5
         let balances = {};
         let totalStake = 0;
-
-        for (const block of this.chain) {//Recorre cada nloque de la cadena
+        //TODO: 3
+        for (const block of this.chain) {//Recorre cada bloque de la cadena
             for (const tx of block.transactions) {//Cada lista de cada bloque
                 if (tx.destino) {
                     balances[tx.destino] = (balances[tx.destino] || 0) + tx.cantidad;
@@ -128,17 +133,17 @@ class Blockchain{
                 if (tx.origen) {
                     balances[tx.origen] = (balances[tx.origen] || 0) - tx.cantidad;
                 }
-            }//Llena la lista balances con los datos de cada usuario, busca en origen y destino.
+            }//Llena la lista balances con las direcciones de wallet y calcula el balance de cada uno.
         }
 
-        for (const addr in balances) {//Apunta todo el dinero de los usuarios
+        for (const addr in balances) {//Apunta todo el dinero de la blockchain
             if (balances[addr] > 0) totalStake += balances[addr];
         }
 
         let random = Math.random() * totalStake;//Saca un numero en función del dinero total
         let cumulative = 0;//Así, quien mas dinero tiene, mas posibilidades tendra de ser elegido.
 
-        for (const addr in balances) {
+        for (const addr in balances) {//TODO: 4
             if (balances[addr] > 0) {
                 cumulative += balances[addr];
                 if (cumulative >= random) return addr;//Cuando el nodo elegido supera el numero "random", entonces es elegido.
@@ -149,13 +154,22 @@ class Blockchain{
     }
 
     //Elige validador, crea un bloque, lo firma y lo añade
-    createBlockPOS(signingKeyValidador) {
-        const validator = this.selectValidator();
+    createBlockPOS(signingKeyValidador, cantCreaciónDin) {
+        let validator = 0;
+        const clavPubBCE = signingKeyValidador.getPublic('hex');
+        if(clavPubBCE === walletBCE){//Cuando la dirección que se pasa es el BCE, entonces no hace falta validar
+            validator = walletBCE;
+            console.log("Detectada operación del BCE, saltando POS...");
+        }else{
+            validator = this.selectValidator();
+            
+        };
+        
 
         if (!validator) {
             console.log("No hay validador disponible");
-            return;
-        }
+            return null;
+        };
         //Comprobamos que la clave privada coincide con el validador
         if (signingKeyValidador.getPublic('hex') !== validator) {
             throw new Error("La clave proporcionada no corresponde al validador seleccionado.");
@@ -180,7 +194,8 @@ class Blockchain{
         this.pendingTransactions = [];
 
         //Recompensa por validar
-        const recompensa = 10; //TODO: Creo que no deberia ser 10, sino alguna variable relacionada con el dinero transferido al banco central, pero hay que hablarlo
+        const recompensa = cantCreaciónDin; //TODO: 1 Creo que no deberia ser 10, sino alguna variable relacionada con el dinero transferido al banco central, pero hay que hablarlo
+        console.log("Fondos transfornados a euroX: " + recompensa + " euros");
         const rewardTx = new Transaction(//incluso si el banco central no es el que obtiene la recompensa, se deberia dar el caso del TODO, segun entiendo.
                 this.crearID(),
                 null,             
@@ -243,11 +258,11 @@ class Blockchain{
        return new Block("01/01/2017", [], "0", "genesis");
     }
 
-    getLatestBlock(){//
+    getLatestBlock(){//Conseguimos el ultimo bloque que hay en la blockchain
         return this.chain[this.chain.length - 1];
     }
 
-    isChainValid(){ 
+    isChainValid(){//Combrueba si la cadena de la blockchain es valida o no
         for (let i = 1; i < this.chain.length; i++){
             const currentBlock = this.chain[i];
             const previousBlock = this.chain[i - 1];
