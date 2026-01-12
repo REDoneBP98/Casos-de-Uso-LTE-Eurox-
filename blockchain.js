@@ -194,7 +194,7 @@ class Blockchain{
         this.pendingTransactions = [];
 
         //Recompensa por validar
-        const recompensa = cantCreaciónDin; //TODO: 1 Creo que no deberia ser 10, sino alguna variable relacionada con el dinero transferido al banco central, pero hay que hablarlo
+        const recompensa = cantCreaciónDin;
         console.log("Fondos transfornados a euroX: " + recompensa + " euros");
         const rewardTx = new Transaction(//incluso si el banco central no es el que obtiene la recompensa, se deberia dar el caso del TODO, segun entiendo.
                 this.crearID(),

@@ -149,7 +149,6 @@ console.log("El saldo de Porter: ", nknCoin.getBalanceOfAddress(walletPor));
 console.log();
 
 //------------Cosas a solucionar---------------
-//1: HECHO Se puede minar en nuestra blockchain? entiendo que no, que solo pueden hacerlo los bancos para transpasar de fisico a digital, es facil de hacer
 //2: El dinero de las cuentas solo debe des visible para los bancos que la tengan y por ende para el usuario, podemos cifrarla o algo asi y que la clave solo la tengan los bancos (en +ver_cuenta, +transferencias)
 //3: El validador no busca en las transaccione actuales, solo en los bloques ya creados
 //4: Si hay alguien que tiene mas pasta que otro, pero va despues en la lista, entonces puede que no salga elegido, creo
