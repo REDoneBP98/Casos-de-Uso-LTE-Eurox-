@@ -86,7 +86,7 @@ class Blockchain{
     
     crearID() {
         let maxID = 0;
-        //Recorremos todos los bloques para encontrar el ID más alto usado
+        //Recorremos todos los bloques para encontrar el ID más alto que se use.
         for (const block of this.chain) {
             for (const tx of block.transactions) {
                 if (tx.id > maxID){
@@ -121,10 +121,10 @@ class Blockchain{
     }
 
     //Elegir validador para PoS (cuanto más dinero, más probabilidades de validar)
-    selectValidator() {//TODO: 5
+    selectValidator() {
         let balances = {};
         let totalStake = 0;
-        //TODO: 3
+        
         for (const block of this.chain) {//Recorre cada bloque de la cadena
             for (const tx of block.transactions) {//Cada lista de cada bloque
                 if (tx.destino) {
@@ -143,7 +143,7 @@ class Blockchain{
         let random = Math.random() * totalStake;//Saca un numero en función del dinero total
         let cumulative = 0;//Así, quien mas dinero tiene, mas posibilidades tendra de ser elegido.
 
-        for (const addr in balances) {//TODO: 4
+        for (const addr in balances) {
             if (balances[addr] > 0) {
                 cumulative += balances[addr];
                 if (cumulative >= random) return addr;//Cuando el nodo elegido supera el numero "random", entonces es elegido.
@@ -196,7 +196,7 @@ class Blockchain{
         //Recompensa por validar
         const recompensa = cantCreaciónDin;
         console.log("Fondos transfornados a euroX: " + recompensa + " euros");
-        const rewardTx = new Transaction(//incluso si el banco central no es el que obtiene la recompensa, se deberia dar el caso del TODO, segun entiendo.
+        const rewardTx = new Transaction(
                 this.crearID(),
                 null,             
                 validator,        

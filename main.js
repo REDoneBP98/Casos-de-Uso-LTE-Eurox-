@@ -13,14 +13,13 @@ const BCEkey = ec.keyFromPrivate('f3ef493ab83a488df5ac1bbdb773b985ed8fb724990d56
 const walletBCE = BCEkey.getPublic('hex');
 nknCoin.inicializarWallet(walletBCE, 600);//Al ser el BCE es normal que además sea el mas poderoso.
 
-//const keyPrueba = ec.keyFromPrivate('7e75a138c1d3749466503c0792f39aec1d0ab2821a9876da95393f2591bdb378');
 //---------------MI BANCO ILEGAL DE CONFIANZA-----
 
 const myKey = ec.keyFromPrivate('0bc0de8d543402a45d1075272c4ce64100f19e2228bbc7cb7f3f36b60b469621'); //Le pasamos la clave privada creada anteriormente
 const myWalletAddress = myKey.getPublic('hex'); //Hexadecimal de mi clave pública
 nknCoin.inicializarWallet(myWalletAddress, 20); //Esto inicializa mi cartera con lo que pongas
 
-//---------------SUCURSALES RICHARDSON------------
+//---------------SUCURSALES BANCARIAS RICHARDSON--
 
 const keyRichard = ec.keyFromPrivate('e072c473556a64735e396dcd4cb52d94f33249f28daa860ad27a6387606d10d9');
 const walletRich = keyRichard.getPublic('hex');
@@ -147,13 +146,6 @@ console.log("El saldo de Richard: ", nknCoin.getBalanceOfAddress(walletRich));
 console.log();
 console.log("El saldo de Porter: ", nknCoin.getBalanceOfAddress(walletPor));
 console.log();
-
-//------------Cosas a solucionar---------------
-//2: El dinero de las cuentas solo debe des visible para los bancos que la tengan y por ende para el usuario, podemos cifrarla o algo asi y que la clave solo la tengan los bancos (en +ver_cuenta, +transferencias)
-//3: El validador no busca en las transaccione actuales, solo en los bloques ya creados
-//4: Si hay alguien que tiene mas pasta que otro, pero va despues en la lista, entonces puede que no salga elegido, creo
-//5: POS funciona por posibilidades, si yo que no tenia mas dinero aun así salgo elegido, entonces como haces para que yo firme el bloque? creo que selectValidator deberia devolver la llave, entonces si se podría
-//Haceis CTRL + F en el blockchain.js y buscais "TODO"
 
 //------------GUIA PARA VER QUIEN GANA---------
 //Basta con comparar los primeros 4 dígitos
